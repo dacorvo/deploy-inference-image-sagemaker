@@ -24,7 +24,8 @@ def deploy_image(llm_image: str,
         llm = llm_model.deploy(
             initial_instance_count=1,
             instance_type=instance_type,
-            container_startup_health_check_timeout=600, # Neuron models take a long time to load + warmup
+            container_startup_health_check_timeout=1800, # Neuron models take a long time to load + warmup
+            volume_size=256,
         )
         print(f"Successfully deployed {llm_model.name} as endpoint {llm_model.endpoint_name}")
     except Exception as e:
