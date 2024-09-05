@@ -21,7 +21,7 @@ hub = {
 
 # create Hugging Face Model Class
 huggingface_model = HuggingFaceModel(
-    image_uri=get_huggingface_llm_image_uri("huggingface-neuronx", version="0.0.23"),
+    image_uri=get_huggingface_llm_image_uri("huggingface-neuronx", version="0.0.24"),
     env=hub,
     role=role,
 )
