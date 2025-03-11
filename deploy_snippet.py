@@ -8,7 +8,7 @@ role = iam.get_role(RoleName="sagemaker_execution_role")["Role"]["Arn"]
 
 # Hub Model configuration. https://huggingface.co/models
 hub = {
-    "HF_MODEL_ID": "meta-llama/Llama-3.2-1B-Instruct",
+    "HF_MODEL_ID": "meta-llama/Llama-3.2-3B-Instruct",
     "HF_NUM_CORES": "2",
     "HF_AUTO_CAST_TYPE": "bf16",
     "MAX_BATCH_SIZE": "1",
