@@ -87,7 +87,7 @@ class LineIterator:
 # query client using streaming mode
 def generate(message, history):
     # Convert history to a chat prompt
-    prompt = format_chat_prompt(message, history, max_tokens=1024)
+    prompt = format_chat_prompt(message, history, max_tokens=2048)
 
     # Request generation parameters
     parameters = {
@@ -122,7 +122,7 @@ markdown_header = """
                 <img class="logo" src="https://huggingface.co/datasets/philschmid/assets/resolve/main/aws-neuron_hf.png" alt="Hugging Face Logo"
                     style="margin: auto; max-width: 14rem;">
                 <h1 style="font-weight: 900; margin-bottom: 7px;margin-top:5px">
-                Chat with LLama 2 on AWS INF2 ⚡
+                Chat with LLama on AWS INF2 ⚡
                 </h1>
             <p style="margin-bottom: 10px; font-size: 94%; line-height: 23px;">
                 This demo is running on <a style="text-decoration: underline;" href="https://aws.amazon.com/ec2/instance-types/inf2/?nc1=h_ls">AWS Inferentia2</a>,
@@ -132,7 +132,7 @@ markdown_header = """
             </div>
             <div style="text-align: center; max-width: 650px; margin: 0 auto; display:grid; gap:25px;">
             <p style="margin-bottom: 10px; font-size: 94%; line-height: 23px;">
-            The chat context is limited to 1024 tokens, and older interactions are progressively 'forgotten'.
+            The chat context is limited to 2048 tokens, and older interactions are progressively 'forgotten'.
             Use the clear button to restart a new conversation.
             </p>
             </div>
