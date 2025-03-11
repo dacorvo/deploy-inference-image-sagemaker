@@ -32,7 +32,7 @@ boto_session = boto3.Session(
 smr = boto_session.client("sagemaker-runtime")
 
 # We need the LLama tokenizer for chat templates
-tokenizer = AutoTokenizer.from_pretrained("NousResearch/Llama-2-7b-chat-hf")
+tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-3B-Instruct")
 tokenizer.use_default_system_prompt = False
 
 
@@ -146,7 +146,7 @@ gr.ChatInterface(
     theme="abidlabs/Lime",
     examples=[
         "My favorite color is blue, and my favorite fruit is strawberry.",
-        "What color is my favorite fruit ?",
+        "What is the color of my favorite fruit ?",
         "Name a fruit that is on my favorite color.",
     ],
     cache_examples=False,
