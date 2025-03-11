@@ -24,7 +24,7 @@ def invoke(endpoint,
             }
         }
     )
-    print(output)
+    print(output[0]["generated_text"])
 
 
 def main():
