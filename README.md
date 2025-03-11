@@ -34,3 +34,10 @@ python deploy_neuronx_tgi.py \
     --region <REGION>
 ```
 
+## Test endpoint in a gradio app
+
+```
+export SAGEMAKER_ENDPOINT_NAME=huggingface-pytorch-tgi-inference-<ID>
+python gradio/app.py
+```
+
