@@ -11,20 +11,33 @@ def invoke(endpoint,
            temperature=1.0):
 
     predictor = HuggingFacePredictor(endpoint_name=endpoint)
-    # send request
-    output = predictor.predict(
-        {
-            "inputs": prompt,
-            "parameters": {
-                "do_sample": True,
-                "max_new_tokens": max_new_tokens,
-                "temperature": temperature,
+    if "vllm" in endpoint:
+        # send request
+        output = predictor.predict(
+            {
+                "prompt": prompt,
+                "max_tokens": max_new_tokens,
                 "top_k": top_k,
                 "top_p": top_p,
+                "temperature": temperature,
             }
-        }
-    )
-    print(output[0]["generated_text"])
+        )
+        print(output["choices"][0]["text"])
+    else:
+        # send request
+        output = predictor.predict(
+            {
+                "inputs": prompt,
+                "parameters": {
+                    "do_sample": True,
+                    "max_new_tokens": max_new_tokens,
+                    "temperature": temperature,
+                    "top_k": top_k,
+                    "top_p": top_p,
+                }
+            }
+        )
+        print(output[0]["generated_text"])
 
 
 def main():

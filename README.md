@@ -1,8 +1,8 @@
-# Sagemaker Hugging Face TGI service deployment scripts
+# Sagemaker Hugging Face service deployment scripts
 
 ## Prerequisites
 
-You need an existing Sagemaker HF TGI image, possibly created from: https://github.com/awslabs/llm-hosting-container.
+You need an existing Sagemaker HF image, possibly created from: https://github.com/awslabs/llm-hosting-container.
 
 You also need to export your AWS CLI credentials, namely:
 
@@ -18,26 +18,28 @@ And finally you need to set a default region:
 export AWS_DEFAULT_REGION=<REGION>
 ```
 
-## Push a TGI image to ECR
+## Push an image to ECR
 
 ```
 ./push_ecr_image.sh <IMAGE>:<TAG> <USER> <REGION>
 ```
 
-## Deploy a TGI neuronx service
+## Deploy a neuronx service
 
 ```
-python deploy_neuronx_tgi.py \
+python deploy_image.py \
     --llm_image <USER>.dkr.ecr.<REGION>.amazonaws.com/<IMAGE>:<TAG> \
     --model_id  <HF_MODEL_ID> \
     --instance_type ml.<INSTANCE_TYPE> \
     --region <REGION>
 ```
 
-## Test endpoint in a gradio app
+Note: you can specify the exact deployment configuration by passing some arguments
+to deploy_image.py (see `python deploy_image.py --help` for the exact list). Otherwise a default configuration will be selected.
+
+## Test endpoint
 
 ```
-export SAGEMAKER_ENDPOINT_NAME=huggingface-pytorch-tgi-inference-<ID>
-python gradio/app.py
+export <SAGEMAKER_ENDPOINT_NAME>
+python invoke_endpoint.py <SAGEMAKER_ENDPOINT_NAME> --max_new_tokens 128
 ```
-
