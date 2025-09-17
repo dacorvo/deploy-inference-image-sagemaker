@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-You need an existing Sagemaker HF image, possibly created from: https://github.com/awslabs/llm-hosting-container.
+You need an existing Sagemaker-compatible image, possibly created from: https://github.com/awslabs/llm-hosting-container.
 
 You also need to export your AWS CLI credentials, namely:
 
@@ -21,14 +21,14 @@ export AWS_DEFAULT_REGION=<REGION>
 ## Push an image to ECR
 
 ```
-./push_ecr_image.sh <IMAGE>:<TAG> <USER> <REGION>
+./push_ecr_image.sh <IMAGE>:<TAG> <ECR_REPOSITORY> <REGION>
 ```
 
-## Deploy a neuronx service
+## Deploy a Sagemaker service
 
 ```
 python deploy_image.py \
-    --llm_image <USER>.dkr.ecr.<REGION>.amazonaws.com/<IMAGE>:<TAG> \
+    --llm_image <USER>.dkr.ecr.<REGION>.amazonaws.com/<ECR_REPOSITORY:<TAG> \
     --model_id  <HF_MODEL_ID> \
     --instance_type ml.<INSTANCE_TYPE> \
     --region <REGION>

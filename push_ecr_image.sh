@@ -1,13 +1,14 @@
 #!/bin/bash
+set -e
 
 if [ "$#" -ne 3 ]; then
-    echo "Usage: $0 <local_image> <aws_account_id> <aws_region>"
+    echo "Usage: $0 <local_image> <ecr_repository> <aws_region>"
 fi
 
 # Pass arguments
-BASE_IMAGE="$1"
-AWS_ACCOUNT_ID="$2"
-AWS_REGION="$3"
+BASE_IMAGE=$1
+ECR_REPOSITORY=${2:-$(echo $BASE_IMAGE | cut -d ":" -f 1)}
+AWS_REGION=${3:-${AWS_DEFAULT_REGION}}
 
 # Verify the base image exists locally
 if [[ "$(docker images -q $BASE_IMAGE 2> /dev/null)" == "" ]]; then
@@ -15,17 +16,18 @@ if [[ "$(docker images -q $BASE_IMAGE 2> /dev/null)" == "" ]]; then
   exit -1
 fi
 
-# Set the name and tag for the ECR repository and tag
-ECR_REPOSITORY=$(echo $BASE_IMAGE | cut -d ":" -f 1)
+# Read account ID (AWS credentials must have been configured or set in the environment).
+AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+
+# We use the same tag on ECR as the one used by the base image
 ECR_IMAGE_TAG=$(echo $BASE_IMAGE | cut -d ":" -f 2)
 
 # Log in to ECR
 echo "Logging in to Amazon ECR..."
 aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
 
-# Create the ECR repository if it doesn't already exist
-echo "Creating ECR repository $ECR_REPOSITORY..."
-aws ecr describe-repositories --repository-names "$ECR_REPOSITORY" || aws ecr create-repository --repository-name "$ECR_REPOSITORY"
+# Query the ECR repository to abort if it doesn't exist
+output=$(aws ecr describe-repositories --repository-names ${ECR_REPOSITORY})
 
 # Tag the Docker Hub image with the ECR repository and image tag
 echo "Tagging image $BASE_IMAGE as $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$ECR_IMAGE_TAG..."

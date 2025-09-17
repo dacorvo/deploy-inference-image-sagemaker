@@ -6,7 +6,7 @@ from sagemaker.huggingface import HuggingFaceModel
 from typing import Dict
 
 
-def deploy_image(llm_image: str,
+def deploy_image(image: str,
                  config: Dict[str, str],
                  instance_type: str,
                  iam_role: str):
@@ -19,7 +19,7 @@ def deploy_image(llm_image: str,
     print(f"config: {config}")
 
     # create HuggingFaceModel
-    llm_model = HuggingFaceModel(role=role, image_uri=llm_image, env=config)
+    llm_model = HuggingFaceModel(role=role, image_uri=image, env=config)
 
     # deploy model to endpoint
     try:
@@ -84,7 +84,7 @@ def get_neuronx_vllm_config(model_id, batch_size, sequence_length, auto_cast_typ
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Deploy a service based on an HuggingFace image on sagemaker")
-    parser.add_argument("--llm_image", type=str, required=True, help="The full Sagemaker image URI")
+    parser.add_argument("--image", type=str, required=True, help="The full Sagemaker image URI")
     parser.add_argument("--model_id", type=str, required=True, help="The HuggingFace model id")
     parser.add_argument("--instance_type", type=str, required=True, help="The Sagemaker trainium/inferentia instance type")
     parser.add_argument("--iam_role", default="sagemaker_execution_role", type=str)
@@ -110,18 +110,18 @@ if __name__ == "__main__":
 
     os.environ['AWS_DEFAULT_REGION'] = args.region
 
-    llm_image = args.llm_image
-    if not "amazonaws.com" in llm_image:
+    image = args.image
+    if not "amazonaws.com" in image:
         raise ValueError("You need to pass a full Sagemaker image URI")
 
-    if "vllm" in llm_image:
+    if "vllm" in image:
         config = get_neuronx_vllm_config(args.model_id,
                                         args.batch_size,
                                         args.sequence_length,
                                         args.auto_cast_type,
                                         args.num_cores,
                                         args.token)
-    elif "tgi" in llm_image:
+    elif "tgi" in image:
         config = get_neuronx_tgi_config(args.model_id,
                                         args.batch_size,
                                         args.sequence_length,
@@ -131,7 +131,7 @@ if __name__ == "__main__":
     else:
         raise ValueError("You must pass a TGI or vLLM image")
 
-    deploy_image(llm_image,
+    deploy_image(image,
                  config,
                  instance_type=args.instance_type,
                  iam_role=args.iam_role)
