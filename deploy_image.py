@@ -3,6 +3,7 @@ import os
 import time
 import boto3
 from sagemaker.huggingface import HuggingFaceModel
+from sagemaker.compute_resource_requirements.resource_requirements import ResourceRequirements
 from typing import Dict
 
 
@@ -21,6 +22,16 @@ def deploy_image(image: str,
     # create HuggingFaceModel
     llm_model = HuggingFaceModel(role=role, image_uri=image, env=config)
 
+    resources_config = ResourceRequirements(
+        # We dedicate 12 vCPU and 18 GB memory for the sagemaker wrapper
+        requests = {
+            "copies": 3, # Number of replicas
+            "num_accelerators": 1, # Number of accelerators (devices) per replica
+            "num_cpus": 60,  # Number of CPU cores per replica (192 - 12) // 3 = 60
+            "memory": 250 * 1024,  # Minimum memory in MB per replica (768 - 18) // 3 = 250
+        },
+    )
+
     # deploy model to endpoint
     try:
         llm = llm_model.deploy(
@@ -28,7 +39,8 @@ def deploy_image(image: str,
             instance_type=instance_type,
             container_startup_health_check_timeout=1800, # Neuron models take a long time to load + warmup
             volume_size=256,
-            inference_ami_version = "al2-ami-sagemaker-inference-neuron-2"
+            inference_ami_version = "al2-ami-sagemaker-inference-neuron-2",
+            resources=resources_config,
         )
         print(f"Successfully deployed {llm_model.name} as endpoint {llm_model.endpoint_name}")
     except Exception as e:
