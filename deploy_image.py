@@ -83,12 +83,18 @@ def get_neuronx_vllm_config(model_id, batch_size, sequence_length, auto_cast_typ
 
 
 if __name__ == "__main__":
+    # Query the current region
+    session = boto3.session.Session()
+    current_region = session.region_name
+
     parser = argparse.ArgumentParser(description="Deploy a service based on an HuggingFace image on sagemaker")
     parser.add_argument("--image", type=str, required=True, help="The full Sagemaker image URI")
     parser.add_argument("--model_id", type=str, required=True, help="The HuggingFace model id")
     parser.add_argument("--instance_type", type=str, required=True, help="The Sagemaker trainium/inferentia instance type")
     parser.add_argument("--iam_role", default="sagemaker_execution_role", type=str)
-    parser.add_argument("--region", default="us-east-1", type=str)
+    parser.add_argument("--region",
+                        type=str,
+                        default="us-east-1" if current_region is None else current_region)
     parser.add_argument("--token",
                         type=str,
                         help="The HuggingFace token to use to fetch the model if gated or private.",
@@ -108,7 +114,8 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    os.environ['AWS_DEFAULT_REGION'] = args.region
+    # Set region
+    boto3.setup_default_session(region_name=args.region)
 
     image = args.image
     if not "amazonaws.com" in image:

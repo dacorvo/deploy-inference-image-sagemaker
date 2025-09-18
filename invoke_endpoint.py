@@ -1,4 +1,5 @@
 import argparse
+import boto3
 
 from sagemaker.huggingface import HuggingFacePredictor
 
@@ -41,14 +42,23 @@ def invoke(endpoint,
 
 
 def main():
+    # Query the current region
+    session = boto3.session.Session()
+    current_region = session.region_name
+
     parser = argparse.ArgumentParser()
     parser.add_argument("endpoint", type=str)
+    parser.add_argument("--region",
+                        type=str,
+                        default="us-east-1" if current_region is None else current_region)
     parser.add_argument("--prompt", type=str, default="What is Deep-learning ?")
     parser.add_argument("--max_new_tokens", type=int, default=20)
     parser.add_argument("--top_k", type=int, default=50)
     parser.add_argument("--top_p", type=float, default=0.9)
     parser.add_argument("--temperature", type=float, default=1.0)
     args = parser.parse_args()
+    # Set region
+    boto3.setup_default_session(region_name=args.region)
     invoke(args.endpoint,
            prompt=args.prompt,
            max_new_tokens=args.max_new_tokens,
