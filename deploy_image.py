@@ -47,10 +47,10 @@ def get_neuronx_tgi_config(model_id, batch_size, sequence_length, auto_cast_type
     max_batch_total_tokens = batch_size * sequence_length
 
     tgi_config = {
-        "HF_MODEL_ID": model_id,
+        "MODEL_ID": model_id,
         "HF_NUM_CORES": f"{num_cores}",
-        "HF_BATCH_SIZE": f"{batch_size}",
-        "HF_SEQUENCE_LENGTH": f"{sequence_length}",
+        "BATCH_SIZE": f"{batch_size}",
+        "SEQUENCE_LENGTH": f"{sequence_length}",
         "HF_AUTO_CAST_TYPE": auto_cast_type,
         "MAX_BATCH_SIZE": f"{batch_size}",
         "MAX_CONCURRENT_REQUESTS": "128",
