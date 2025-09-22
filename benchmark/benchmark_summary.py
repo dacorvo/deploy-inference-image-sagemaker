@@ -23,19 +23,19 @@ def summarize(metrics: dict[str, str]):
     Args:
         metrics: the Locust metrics
     Returns:
-        A tuple of prompt_tokens, generated_tokens, request-per-second, time-to-first-token, throughput
+        A tuple of prompt_tokens, generated_tokens, request-per-second, time-to-first-token, latency, throughput
     """
     for name in METRICS_NAMES:
         assert name in metrics
-    total_time = float(metrics["total_time"]["Average Response Time"])
+    rps = float(metrics["total_time"]["Requests/s"])
     encoding_time = float(metrics["encoding_time"]["Average Response Time"])
     prompt_tokens = float(metrics["encoding_time"]["Average Content Size"])
     decoding_time = float(metrics["decoding_time"]["Average Response Time"])
     generated_tokens = float(metrics["decoding_time"]["Average Content Size"])
-    rps = 1000 / total_time
     ttft = encoding_time / 1000
-    throughput = 1000 * generated_tokens / decoding_time
-    return prompt_tokens, generated_tokens, rps, ttft, throughput
+    latency = decoding_time / generated_tokens
+    throughput = rps * generated_tokens
+    return prompt_tokens, generated_tokens, rps, ttft, latency, throughput
 
 
 if __name__ == "__main__":
@@ -52,6 +52,7 @@ if __name__ == "__main__":
             "Average generated tokens",
             "Requests per Second",
             "Time-to-first-token (s)",
+            "Inter-token-latency (ms)",
             "Output Token Throughput (t/s)"
         ])
         csv_stats_path = Path(args.directory)
