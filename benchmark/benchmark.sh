@@ -22,6 +22,7 @@ locust --headless  \
        --csv ${endpoint}-${suffix}.csv \
        --u ${users} \
        --run-time ${duration} \
+       --spawn-rate 10 \
        --prompt-file ${SCRIPT_DIR}/alice.txt \
        --average-prompt-lines ${prompt_lines} \
        --average-output-tokens ${tokens}
