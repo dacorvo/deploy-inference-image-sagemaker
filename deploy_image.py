@@ -2,6 +2,7 @@ import argparse
 import os
 import time
 import boto3
+import warnings
 from sagemaker.huggingface import HuggingFaceModel
 from typing import Dict
 
@@ -128,6 +129,11 @@ if __name__ == "__main__":
     image = args.image
     if not "amazonaws.com" in image:
         raise ValueError("You need to pass a full Sagemaker image URI")
+
+    if args.token is None:
+        warnings.warn("You did not pass a HuggingFace token. Make sure the model is public."
+                      "Please note also that your endpoint will be rate limited when fetching"
+                      "from the Hugging Face hub and may not be able to start.")
 
     if "vllm" in image:
         config = get_neuronx_vllm_config(args.model_id,
