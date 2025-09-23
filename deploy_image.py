@@ -22,12 +22,21 @@ def deploy_image(image: str,
     llm_model = HuggingFaceModel(role=role, image_uri=image, env=config)
 
     # deploy model to endpoint
+    volume_size = None
+    if not "trn1" in instance_type:
+        # With most instance types a separate volume is mounted dynamically under /tmp.
+        # This volume has by default only 50B of disk space, so it needs to be increased
+        # to support large models.
+        # Trainium 1 endpoints do not have this limitation because each Trainium instance
+        # comes with 4 disk drives of fixed size. As a consequence, the volume_size parameter
+        # is not supported.
+        volume_size = 256
     try:
         llm = llm_model.deploy(
             initial_instance_count=1,
             instance_type=instance_type,
             container_startup_health_check_timeout=1800, # Neuron models take a long time to load + warmup
-            volume_size=256,
+            volume_size=volume_size,
             inference_ami_version = "al2-ami-sagemaker-inference-neuron-2"
         )
         print(f"Successfully deployed {llm_model.name} as endpoint {llm_model.endpoint_name}")
