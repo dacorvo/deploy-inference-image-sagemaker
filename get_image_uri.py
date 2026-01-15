@@ -29,7 +29,7 @@ if __name__ == "__main__":
     session = boto3.session.Session()
     current_region = session.region_name
 
-    parser = argparse.ArgumentParser(description="Retrieve the SageMaker image URI for a given framework and model")
+    parser = argparse.ArgumentParser(description="Retrieve the SageMaker image URI for a given framework")
     parser.add_argument("--framework", type=str, default="huggingface-vllm-neuronx", help="The framework name")
     parser.add_argument("--region", type=str, default="us-east-1" if current_region is None else current_region, help="The AWS region")
     parser.add_argument("--version", type=str, default=None, help="The version of the framework")
