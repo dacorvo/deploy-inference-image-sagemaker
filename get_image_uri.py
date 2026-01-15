@@ -10,8 +10,8 @@ def retrieve_image_uri(region: str,
     Retrieve the image URI for a given framework.
 
     Args:
-        framework (str): The framework name (e.g., 'huggingface-vllm-neuronx').
         region (str): The AWS region.
+        framework (str): The framework name (e.g., 'huggingface-vllm-neuronx').
         version (str | None): The version of the framework.
 
     Returns:
