@@ -1,7 +1,8 @@
 import argparse
 import boto3
+import json
 
-from sagemaker.huggingface import HuggingFacePredictor
+from sagemaker.core.resources import Endpoint
 
 
 def invoke(endpoint,
@@ -11,34 +12,22 @@ def invoke(endpoint,
            top_p=0.9,
            temperature=1.0):
 
-    predictor = HuggingFacePredictor(endpoint_name=endpoint)
-    if "vllm" in endpoint:
-        # send request
-        output = predictor.predict(
-            {
-                "prompt": prompt,
-                "max_tokens": max_new_tokens,
-                "top_k": top_k,
-                "top_p": top_p,
-                "temperature": temperature,
-            }
-        )
-        print(output["choices"][0]["text"])
-    else:
-        # send request
-        output = predictor.predict(
-            {
-                "inputs": prompt,
-                "parameters": {
-                    "do_sample": True,
-                    "max_new_tokens": max_new_tokens,
-                    "temperature": temperature,
-                    "top_k": top_k,
-                    "top_p": top_p,
-                }
-            }
-        )
-        print(output[0]["generated_text"])
+    endpoint = Endpoint.get(endpoint_name=endpoint)
+    assert endpoint is not None
+    # send request
+    result = endpoint.invoke(
+        body=json.dumps({
+            "prompt": prompt,
+            "max_tokens": max_new_tokens,
+            "top_k": top_k,
+            "top_p": top_p,
+            "temperature": temperature,
+        }),
+        content_type="application/json"
+    )
+    assert result is not None
+    output = json.loads(result.body.read().decode('utf-8'))
+    print(output["choices"][0]["text"])
 
 
 def main():

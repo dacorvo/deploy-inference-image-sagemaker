@@ -34,7 +34,7 @@ export AWS_DEFAULT_REGION=<REGION>
 
 ```shell
 python deploy_image.py \
-    --llm_image <USER>.dkr.ecr.<REGION>.amazonaws.com/<ECR_REPOSITORY:<TAG> \
+    --image <USER>.dkr.ecr.<REGION>.amazonaws.com/<ECR_REPOSITORY:<TAG> \
     --model_id  <HF_MODEL_ID> \
     --instance_type ml.<INSTANCE_TYPE> \
     --region <REGION>
