@@ -1,2 +1,2 @@
 locust
-sagemaker
+sagemaker >=3.0.0

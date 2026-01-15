@@ -3,26 +3,52 @@ import os
 import time
 import boto3
 import warnings
-from sagemaker.huggingface import HuggingFaceModel
-from typing import Dict
+from sagemaker.core.resources import Endpoint, Model, ContainerDefinition, EndpointConfig, ProductionVariant
 
 
 def deploy_image(image: str,
-                 config: Dict[str, str],
+                 model_id: str,
                  instance_type: str,
-                 iam_role: str):
+                 batch_size: int | None = None,
+                 sequence_length: int | None = None,
+                 tensor_parallel_size: int | None = None,
+                 token: str | None = None,
+                 iam_role: str = "sagemaker_execution_role"):
     start = time.time()
     iam = boto3.client("iam")
     role = iam.get_role(RoleName=iam_role)["Role"]["Arn"]
 
     print(f"sagemaker role arn: {role}")
     print(f"instance type: {instance_type}")
-    print(f"config: {config}")
 
-    # create HuggingFaceModel
-    llm_model = HuggingFaceModel(role=role, image_uri=image, env=config)
+    # vLLM deployment parameters are specified in the environment variables
+    environment = {
+        "SM_ON_MODEL": model_id,
+    }
+    if batch_size is not None:
+        environment["SM_ON_MAX_NUM_SEQS"] = str(batch_size)
+    if sequence_length is not None:
+        environment["SM_ON_MAX_MODEL_LEN"] = str(sequence_length)
+    if tensor_parallel_size is not None:
+        environment["SM_ON_TENSOR_PARALLEL_SIZE"] = str(tensor_parallel_size)
+    if token is not None:
+        environment["HF_TOKEN"] = token
 
-    # deploy model to endpoint
+    print(f"deployment parameters: {environment}")
+
+    container = ContainerDefinition(image=image, environment=environment)
+
+    model_name = model_id.split("/")[-1].replace(".", "-").lower()
+
+    endpoint_name = model_name + "-vllm-neuron-" + str(int(time.time()))
+
+    model = Model.create(
+        model_name=endpoint_name,
+        primary_container=container,
+        execution_role_arn=role,
+    )
+    assert model is not None
+
     volume_size = None
     if not "trn1" in instance_type:
         # With most instance types a separate volume is mounted dynamically under /tmp.
@@ -32,63 +58,31 @@ def deploy_image(image: str,
         # comes with 4 disk drives of fixed size. As a consequence, the volume_size parameter
         # is not supported.
         volume_size = 256
-    try:
-        llm = llm_model.deploy(
-            initial_instance_count=1,
-            instance_type=instance_type,
-            container_startup_health_check_timeout=1800, # Neuron models take a long time to load + warmup
-            volume_size=volume_size,
-            inference_ami_version = "al2-ami-sagemaker-inference-neuron-2"
-        )
-        print(f"Successfully deployed {llm_model.name} as endpoint {llm_model.endpoint_name}")
-    except Exception as e:
-        print(e)
-        print(f"Failed to deploy model with config {config} on {instance_type}")
-    finally:
-        print(f"Total time: {round(time.time() - start)}s")
+    endpoint_config = EndpointConfig.create(
+        endpoint_config_name=endpoint_name,
+        production_variants=[
+            ProductionVariant(
+                variant_name="AllTraffic",
+                model_name=model.model_name,
+                initial_instance_count=1,
+                instance_type=instance_type,
+                container_startup_health_check_timeout_in_seconds=1800, # Neuron models take a long time to load + warmup
+                volume_size_in_gb=volume_size,
+                inference_ami_version = "al2-ami-sagemaker-inference-neuron-2"
+            )
+        ],
+    )
+    assert endpoint_config is not None
 
+    endpoint = Endpoint.create(
+        endpoint_name=endpoint_name,
+        endpoint_config_name=endpoint_config.endpoint_config_name,
+    )
+    assert endpoint is not None
 
-# TGI deployment config
-def get_neuronx_tgi_config(model_id, batch_size, sequence_length, auto_cast_type, num_cores, token):
-
-    max_input_length = sequence_length // 2
-    max_total_tokens = sequence_length
-    max_batch_prefill_tokens = batch_size * max_input_length
-    max_batch_total_tokens = batch_size * sequence_length
-
-    tgi_config = {
-        "MODEL_ID": model_id,
-        "HF_NUM_CORES": f"{num_cores}",
-        "SEQUENCE_LENGTH": f"{sequence_length}",
-        "HF_AUTO_CAST_TYPE": auto_cast_type,
-        "MAX_BATCH_SIZE": f"{batch_size}",
-        "MAX_CONCURRENT_REQUESTS": "128",
-        "MAX_INPUT_LENGTH": f"{max_input_length}",
-        "MAX_TOTAL_TOKENS": f"{max_total_tokens}",
-        "MAX_BATCH_PREFILL_TOKENS": f"{max_batch_prefill_tokens}",
-        "MAX_BATCH_TOTAL_TOKENS": f"{max_batch_total_tokens}",
-    }
-
-    if token:
-        tgi_config["HUGGING_FACE_HUB_TOKEN"] = token
-
-    return tgi_config
-
-
-# vLLM deployment config
-def get_neuronx_vllm_config(model_id, batch_size, sequence_length, auto_cast_type, num_cores, token):
-
-    vllm_config = {
-        "SM_VLLM_MODEL": model_id,
-        "SM_VLLM_MAX_NUM_SEQS": f"{batch_size}",
-        "SM_VLLM_TENSOR_PARALLEL_SIZE": f"{num_cores}",
-        "SM_VLLM_MAX_MODEL_LEN": f"{sequence_length}",
-    }
-
-    if token:
-        vllm_config["HF_TOKEN"] = token
-
-    return vllm_config
+    endpoint.wait_for_status(target_status='InService')
+    print(f"Successfully deployed {model.model_name} as endpoint {endpoint.endpoint_name}")
+    print(f"Total time: {round(time.time() - start)}s")
 
 
 if __name__ == "__main__":
@@ -108,19 +102,9 @@ if __name__ == "__main__":
                         type=str,
                         help="The HuggingFace token to use to fetch the model if gated or private.",
                         default=os.environ.get("HF_TOKEN", None))
-    parser.add_argument(
-        "--batch_size",
-        type=int,
-        default=1,
-        help="The batch size.",
-    )
+    parser.add_argument("--batch_size", type=int, help="The batch size.")
     parser.add_argument("--sequence_length", type=int, help="The maximum sequence length.")
-    parser.add_argument(
-        "--num_cores", type=int, default=2, help="The number of cores on which the model should be split."
-    )
-    parser.add_argument(
-        "--auto_cast_type", type=str, default="bf16", choices=["fp32", "fp16", "bf16"], help="One of fp32, fp16, bf16."
-    )
+    parser.add_argument("--tensor_parallel_size", type=int, help="The number of cores on which the model should be split.")
     args = parser.parse_args()
 
     # Set region
@@ -135,24 +119,11 @@ if __name__ == "__main__":
                       "Please note also that your endpoint will be rate limited when fetching"
                       "from the Hugging Face hub and may not be able to start.")
 
-    if "vllm" in image:
-        config = get_neuronx_vllm_config(args.model_id,
-                                        args.batch_size,
-                                        args.sequence_length,
-                                        args.auto_cast_type,
-                                        args.num_cores,
-                                        args.token)
-    elif "tgi" in image:
-        config = get_neuronx_tgi_config(args.model_id,
-                                        args.batch_size,
-                                        args.sequence_length,
-                                        args.auto_cast_type,
-                                        args.num_cores,
-                                        args.token)
-    else:
-        raise ValueError("You must pass a TGI or vLLM image")
-
     deploy_image(image,
-                 config,
+                 model_id=args.model_id,
+                 batch_size=args.batch_size,
+                 sequence_length=args.sequence_length,
+                 tensor_parallel_size=args.tensor_parallel_size,
+                 token=args.token,
                  instance_type=args.instance_type,
                  iam_role=args.iam_role)
